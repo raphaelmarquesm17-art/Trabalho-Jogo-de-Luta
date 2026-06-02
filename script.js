@@ -1,6 +1,7 @@
 
 const canvas = document.querySelector('canvas')
 const c = canvas.getContext('2d')
+let gameStarted = false
 
 canvas.width = 1024
 canvas.height = 576
@@ -10,7 +11,8 @@ class Sprite {
     imageSrc,
     scale = 1,
     framesMax = 1,
-    offset = { x: 0, y: 0 }
+    offset = { x: 0, y: 0 },
+
   }) {
     this.position = position
     this.width = 50
@@ -23,21 +25,37 @@ class Sprite {
     this.framesElapsed = 0
     this.framesHold = 5
     this.offset = offset
+    this.facing = 1
   }
 
   draw() {
-    c.drawImage(
-      this.image,
-      this.framesCurrent * (this.image.width / this.framesMax),
-      0,
-      this.image.width / this.framesMax,
-      this.image.height,
-      this.position.x - this.offset.x,
-      this.position.y - this.offset.y,
-      (this.image.width / this.framesMax) * this.scale,
-      this.image.height * this.scale
+  c.save()
+
+  if (this.facing === -1) {
+    // Flip horizontally around the sprite's center
+    c.scale(-1, 1)
+    c.translate(
+      -(this.position.x - this.offset.x + (this.image.width / this.framesMax) * this.scale),
+      0
     )
+  } else {
+    c.translate(this.position.x - this.offset.x, 0)
   }
+
+  c.drawImage(
+    this.image,
+    this.framesCurrent * (this.image.width / this.framesMax),
+    0,
+    this.image.width / this.framesMax,
+    this.image.height,
+    0, // x is now handled by translate
+    this.position.y - this.offset.y,
+    (this.image.width / this.framesMax) * this.scale,
+    this.image.height * this.scale
+  )
+
+  c.restore()
+}
 
   animateFrames() {
     this.framesElapsed++
@@ -108,6 +126,20 @@ class Fighter extends Sprite {
     }
   }
 
+  reset() {
+    this.dead = false
+    this.health = 100
+
+    this.framesCurrent = 0
+    this.framesElapsed = 0
+
+    this.isAttacking = false
+    this.jumpCount = 0
+
+    this.image = this.sprites.idle.image
+    this.framesMax = this.sprites.idle.framesMax
+  }
+
   update() {
     this.draw()
     if (!this.dead) this.animateFrames()
@@ -126,6 +158,15 @@ class Fighter extends Sprite {
 
     this.position.x += this.velocity.x
     this.position.y += this.velocity.y
+
+    if (this.position.x < 0) {
+      this.position.x = 0
+    }
+
+// Right boundary
+    if (this.position.x + this.width > canvas.width) {
+      this.position.x = canvas.width - this.width
+    }
 
     // gravity function
     if (this.position.y + this.height + this.velocity.y >= canvas.height - 96) {
@@ -156,6 +197,8 @@ class Fighter extends Sprite {
         this.dead = true
       return
     }
+
+  
 
     // overriding all other animations with the attack animation
     if (
@@ -242,14 +285,17 @@ function rectangularCollision({ rectangle1, rectangle2 }) {
 }
 
 function determineWinner({ player, enemy, timerId }) {
+  if (!gameStarted) return
+  gameStarted = false
   clearTimeout(timerId)
   document.querySelector('#displayText').style.display = 'flex'
+  document.querySelector('#rematchBtn').style.display = 'block'
   if (player.health === enemy.health) {
-    document.querySelector('#displayText').innerHTML = 'Empate!'
+    document.querySelector('#resultText').innerHTML = 'Empate!'
   } else if (player.health > enemy.health) {
-    document.querySelector('#displayText').innerHTML = 'Jogador 1 venceu!'
-  } else if (player.health < enemy.health) {
-    document.querySelector('#displayText').innerHTML = 'Jogador 2 venceu!'
+    document.querySelector('#resultText').innerHTML = 'Jogador 1 venceu!'
+  } else {
+    document.querySelector('#resultText').innerHTML = 'Jogador 2 venceu!'
   }
 }
 
@@ -279,15 +325,7 @@ const background = new Sprite({
   imageSrc: './img/background.png'
 })
 
-const shop = new Sprite({
-  position: {
-    x: 600,
-    y: 128
-  },
-  imageSrc: './img/shop.png',
-  scale: 2.75,
-  framesMax: 6
-})
+
 
 const player = new Fighter({
   position: {
@@ -351,7 +389,7 @@ const player = new Fighter({
 
 const enemy = new Fighter({
   position: {
-    x: 400,
+    x: 1600,
     y: 100
   },
   velocity: {
@@ -426,15 +464,35 @@ const keys = {
     pressed: false
   }
 }
+function startCountdown() {
+  const displayText = document.querySelector('#displayText')
+  const messages = ['3', '2', '1', 'FIGHT!']
+  gameStarted = false
+  let i = 0
 
-decreaseTimer()
+  displayText.style.display = 'flex'
+  document.querySelector('#resultText').innerHTML = messages[i] // 👈 use resultText!
+
+  const countdownInterval = setInterval(() => {
+    i++
+    if (i < messages.length) {
+      document.querySelector('#resultText').innerHTML = messages[i] // 👈 here too!
+    } else {
+      clearInterval(countdownInterval)
+      displayText.style.display = 'none'
+      gameStarted = true
+      decreaseTimer()
+    }
+  }, 1000)
+}
+
+startCountdown()
 
 function animate() {
   window.requestAnimationFrame(animate)
   c.fillStyle = 'black'
   c.fillRect(0, 0, canvas.width, canvas.height)
   background.update()
-  shop.update()
   c.fillStyle = 'rgba(255, 255, 255, 0.15)'
   c.fillRect(0, 0, canvas.width, canvas.height)
   player.update()
@@ -447,9 +505,11 @@ function animate() {
 
   if (keys.a.pressed && player.lastKey === 'a') {
     player.velocity.x = -5
+    player.facing = -1
     player.switchSprite('run')
   } else if (keys.d.pressed && player.lastKey === 'd') {
     player.velocity.x = 5
+    player.facing = 1
     player.switchSprite('run')
   } else {
     player.switchSprite('idle')
@@ -465,9 +525,11 @@ function animate() {
   // Enemy movement
   if (keys.ArrowLeft.pressed && enemy.lastKey === 'ArrowLeft') {
     enemy.velocity.x = -5
+    enemy.facing = 1
     enemy.switchSprite('run')
   } else if (keys.ArrowRight.pressed && enemy.lastKey === 'ArrowRight') {
     enemy.velocity.x = 5
+    enemy.facing = -1
     enemy.switchSprite('run')
   } else {
     enemy.switchSprite('idle')
@@ -533,6 +595,7 @@ function animate() {
 animate()
 
 window.addEventListener('keydown', (event) => {
+  if (!gameStarted) return
   if (!player.dead) {
     switch (event.key) {
       case 'd':
@@ -548,8 +611,10 @@ window.addEventListener('keydown', (event) => {
             player.velocity.y = -20
             player.jumpCount++}
         break
-      case ' ':
+      case 's':
         player.attack()
+        const hitSound1 = new Audio('hit.mp3')
+        hitSound1.play()
         break
     }
   }
@@ -571,7 +636,8 @@ window.addEventListener('keydown', (event) => {
         break
       case 'ArrowDown':
         enemy.attack()
-
+        const hitSound2 = new Audio('hit.mp3')
+        hitSound2.play()
         break
     }
   }
@@ -598,3 +664,48 @@ window.addEventListener('keyup', (event) => {
   }
 })
 
+const audio = document.getElementById('bg-music');
+
+// Play as soon as the user clicks or presses any key
+function startMusic() {
+  audio.play().catch(err => console.log('Audio blocked:', err));
+  document.removeEventListener('click', startMusic);
+  document.removeEventListener('keydown', startMusic);
+}
+
+document.addEventListener('click', startMusic);
+document.addEventListener('keydown', startMusic);
+
+document.querySelector('#rematchBtn').addEventListener('click', () => {
+  audio.currentTime = 0;
+  audio.play();
+  document.querySelector('#rematchBtn').style.display = 'none'
+  document.querySelector('#displayText').style.display = 'none'
+
+  // Reset health
+  player.health = 100
+  enemy.health = 100
+  gsap.to('#playerHealth', { width: '100%' })
+  gsap.to('#enemyHealth', { width: '100%' })
+
+  // Reset positions
+  player.position.x = 0
+  player.position.y = 0
+  player.velocity.x = 0
+  player.velocity.y = 0
+
+  enemy.position.x = 1600
+  enemy.position.y = 100
+  enemy.velocity.x = 0
+  enemy.velocity.y = 0
+
+  player.reset()
+  enemy.reset()
+
+  // Reset timer
+  timer = 60
+  document.querySelector('#timer').innerHTML = timer
+
+  gameStarted = false
+  startCountdown()
+})

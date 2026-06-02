@@ -14,6 +14,10 @@
   </style>
 </head>
 <body>
+
+  <audio id="bg-music" src="Full On.mp3" loop>
+    <source src="Full On.mp3" type="audio/mpeg">
+  </audio>
   <!-- red container div -->
   <div style="position: relative; display: inline-block">
     <!-- smaller red container div -->
@@ -50,6 +54,7 @@
             width: 100%;
           "
         ></div>
+        
       </div>
 
       <!-- timer -->
@@ -95,23 +100,25 @@
       <div></div>
     </div>
     <div
-      id="displayText"
-      style="
-        position: absolute;
-        color: white;
-        align-items: center;
-        justify-content: center;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        left: 0;
-        display: none;
-      "
-    >
-      Tie
-    </div>
-    <canvas id="myCanvas" width="1600" height="900">display:flex</canvas>
+  id="displayText"
+  style="
+    position: absolute;
+    color: white;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 20px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  "
+>
+    <span id="resultText">Tie</span>
+    <button id="rematchBtn" style="display: none; padding: 10px 20px; font-family: 'Press Start 2P', cursive; cursor: pointer;">Jogar de novo?</button>
   </div>
+
+  <canvas id="myCanvas" width="1024" height="576"></canvas>
 
   <script
     src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"
