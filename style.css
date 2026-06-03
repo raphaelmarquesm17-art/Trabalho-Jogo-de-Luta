@@ -6,3 +6,12 @@ body {
     min-height: 100vh;
     margin: 0;
 }
+
+@keyframes flashRed {
+  0%   { background-color: white; }
+  100% { background-color: #818cf8; }
+}
+
+.flash {
+  animation: flashRed 0.3s ease-out;
+}
