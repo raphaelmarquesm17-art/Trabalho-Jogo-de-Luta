@@ -603,7 +603,7 @@ window.addEventListener('keydown', (event) => {
         break
       case 'w':
         if (player.jumpCount < player.maxJumps) {
-          player.velocity.y = -20
+          player.velocity.y = -15
           player.jumpCount++
         }
         break
@@ -628,7 +628,7 @@ window.addEventListener('keydown', (event) => {
         break
       case 'ArrowUp':
         if (enemy.jumpCount < enemy.maxJumps) {
-          enemy.velocity.y = -20
+          enemy.velocity.y = -15
           enemy.jumpCount++
         }
         break
